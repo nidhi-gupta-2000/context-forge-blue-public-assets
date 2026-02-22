@@ -1,0 +1,16 @@
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+
+# MCP client/server for Context Forge
+context-forge-mcp==0.3.2
+
+# SSE support (Context Forge uses SSE for streaming)
+sseclient==0.0.27
+
+# HTTP client used by sseclient and your FastAPI tool
+requests==2.31.0
+
+# Required by FastAPI (Pydantic v2)
+pydantic==2.6.4
+pydantic-core==2.16.3
+typing-extensions==4.10.0

@@ -16,5 +16,11 @@ HEADERS = {
 @app.get("/behavior-health")
 def get_behavior_health():
     response = requests.get(SOURCE_URL, headers=HEADERS)
-    response.raise_for_status()  # raises error if request failed
-    return response.json()
+    response.raise_for_status()
+    data = response.json()
+
+    # ✅ Just return directly — FastAPI handles serialization
+    if isinstance(data, list):
+        return data
+    else:
+        return [data]
