@@ -62,7 +62,7 @@ def detect_context(query: str) -> str:
 # ---------------------------------------------------------
 #  Change this to test different member queries
 # ---------------------------------------------------------
-MEMBER_QUERY = "I am struggling with drug and alcohol overuse"
+MEMBER_QUERY = "I am struggling with youth anxiety and stress, what resources do you have?"
 
 
 # ==========================================================
