@@ -14,3 +14,9 @@ requests==2.31.0
 pydantic==2.6.4
 pydantic-core==2.16.3
 typing-extensions==4.10.0
+
+# Anthropic Claude LLM SDK
+anthropic==0.83.0
+
+# Load environment variables from .env file
+python-dotenv==1.0.1
