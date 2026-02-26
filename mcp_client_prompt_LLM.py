@@ -1,10 +1,12 @@
 import json
+import sys
 import uuid
 import requests
 from typing import Any
 from pydantic import RootModel
 import anthropic
 
+sys.stdout.reconfigure(encoding="utf-8")
 
 from dotenv import load_dotenv
 load_dotenv()  # ← must be before anthropic.Anthropic()
@@ -70,27 +72,27 @@ Return just the single word/phrase, nothing else.""",
 # ---------------------------------------------------------
 #  LLM Step 2: Summarize docs into member-friendly response
 # ---------------------------------------------------------
-def summarize_docs_llm(member_query: str, context: str, docs: list) -> str:
+def summarize_docs_llm(member_query: str, context: str, docs: list, prompt_text: str = "") -> str:
     docs_text = json.dumps(docs, indent=2)
-    response = claude.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=500,
-        system="""You are a compassionate BCBSNC benefits advisor helping members 
-find behavioral health resources. Given the member's concern and a list of 
-available resources, provide a warm, helpful response that:
-1. Acknowledges their concern briefly
-2. Lists the most relevant 2-3 resources with their links
-3. Encourages them to reach out for help""",
-        messages=[
-            {
-                "role": "user",
-                "content": f"""Member query: {member_query}
+    if prompt_text:
+        # Use the MCP prompt as the user message, append docs to it
+        user_content = f"{prompt_text}\n\nAvailable resources:\n{docs_text}"
+    else:
+        user_content = f"""Member query: {member_query}
 Context: {context}
 Available resources: {docs_text}
 
 Please provide a helpful response for this member."""
-            }
-        ]
+    response = claude.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=500,
+        system="""You are a compassionate BCBSNC benefits advisor helping members
+find behavioral health resources. Given the member's concern and a list of
+available resources, provide a warm, helpful response that:
+1. Acknowledges their concern briefly
+2. Lists the most relevant 2-3 resources with their links
+3. Encourages them to reach out for help""",
+        messages=[{"role": "user", "content": user_content}]
     )
     return response.content[0].text
 
@@ -98,7 +100,7 @@ Please provide a helpful response for this member."""
 # ---------------------------------------------------------
 #  Change this to test different member queries
 # ---------------------------------------------------------
-MEMBER_QUERY = "I've been feeling really down lately though I am youth and feel like behavioral health issues and can't find motivation"
+MEMBER_QUERY = "I've been feeling really down lately and can't find motivation"
 
 
 # ==========================================================
@@ -127,11 +129,26 @@ prompt_result = mcp_call("prompts/get", {
         "context": context
     }
 })
+messages = []
+prompt_text = ""
 try:
-    messages = prompt_result.root.get("result", {}).get("messages", [])
-    print(f"✅ Prompt returned {len(messages)} message(s)")
+    raw = prompt_result.root
+    # Check for MCP-level error first
+    if raw.get("error"):
+        print(f"❌ MCP error: {raw['error']}")
+    else:
+        result = raw.get("result", {})
+        messages = result.get("messages", [])
+
+        if not messages:
+            print(f"⚠️  0 messages returned. Raw result: {json.dumps(result, indent=2)[:500]}")
+        else:
+            prompt_text = messages[0]["content"]["text"]
+            print(f"✅ Prompt returned {len(messages)} message(s)")
+            print(f"   Prompt text: {prompt_text[:200]}...")
 except Exception as e:
-    print(f"❌ Prompt failed: {e}")
+    print(f"❌ Prompt extraction failed: {e}")
+    print(f"   Raw response: {json.dumps(prompt_result.root, indent=2)[:500]}")
     messages = []
 
 
@@ -217,7 +234,7 @@ print("=" * 60)
 print("STEP 6: LLM generating member response")
 print("=" * 60)
 
-final_response = summarize_docs_llm(MEMBER_QUERY, context, final_docs)
+final_response = summarize_docs_llm(MEMBER_QUERY, context, final_docs, prompt_text)
 print(f"\n{'=' * 60}")
 print("FINAL RESPONSE TO MEMBER:")
 print('=' * 60)
